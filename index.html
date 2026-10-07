@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autodiagnostic - Mon organisation au quotidien</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#101010; --surface:#191919; --surface2:#212121; --line:#2E2E2E;
+    --ink:#F4F4F4; --muted:#9A9A9A; --accent:#E25667; --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font-family:"DM Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{padding:24px 16px 72px;line-height:1.5}
+  .wrap{max-width:780px;margin:0 auto}
+  .brand{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-size:clamp(1.6rem,5vw,2.4rem);font-weight:700;letter-spacing:-.02em;line-height:1.12;margin:10px 0 8px}
+  .lede{color:var(--muted);max-width:62ch}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+  .btn{appearance:none;border:0;border-radius:999px;background:var(--accent);color:#fff;font-family:inherit;
+       font-size:1rem;font-weight:700;padding:14px 28px;cursor:pointer;transition:.15s}
+  .btn:hover{filter:brightness(1.1)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:500}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  .screen{display:none} .screen.on{display:block}
+
+  /* progression */
+  .top{position:sticky;top:0;z-index:10;background:rgba(16,16,16,.93);backdrop-filter:blur(8px);
+       margin:-24px -16px 22px;padding:14px 16px 12px;border-bottom:1px solid var(--line)}
+  .meta{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;color:var(--muted);margin-bottom:9px}
+  .track{height:4px;border-radius:2px;background:var(--surface2);overflow:hidden}
+  .fill{height:100%;width:0;background:var(--accent);border-radius:2px;transition:width .25s ease}
+
+  .qnum{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  .q{font-size:clamp(1.15rem,3.4vw,1.5rem);font-weight:700;line-height:1.3;margin:8px 0 22px;letter-spacing:-.01em}
+  .opts{display:flex;flex-direction:column;gap:10px}
+  .opt{display:flex;gap:14px;align-items:flex-start;text-align:left;width:100%;
+       background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:15px 16px;
+       color:var(--ink);font-family:inherit;font-size:.98rem;line-height:1.45;cursor:pointer;transition:.12s}
+  .opt:hover{border-color:#4A4A4A;background:var(--surface2)}
+  .opt .k{flex:0 0 28px;height:28px;border-radius:50%;background:var(--surface2);border:1px solid var(--line);
+          display:grid;place-items:center;font-size:.8rem;font-weight:700;color:var(--muted);text-transform:lowercase}
+  .opt[aria-pressed="true"]{border-color:var(--accent);background:#1C1719}
+  .opt[aria-pressed="true"] .k{background:var(--accent);border-color:var(--accent);color:#fff}
+  .nav{display:flex;justify-content:space-between;gap:12px;margin-top:26px;align-items:center}
+
+  /* resultat */
+  .score{display:flex;align-items:baseline;gap:10px;margin:6px 0 4px}
+  .score .n{font-size:clamp(3rem,13vw,4.6rem);font-weight:700;line-height:1;letter-spacing:-.04em}
+  .score .d{font-size:1.1rem;color:var(--muted)}
+  .verdict{border-left:3px solid var(--accent);padding-left:18px;margin:22px 0 28px}
+  .verdict h2{font-size:1.3rem;margin-bottom:8px}
+  .verdict p{color:#D6D6D6}
+  h3{font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:30px 0 12px}
+  .band{display:flex;gap:14px;padding:13px 14px;border-radius:11px;border:1px solid transparent;align-items:baseline}
+  .band:nth-child(odd){background:var(--surface)}
+  .band.me{border-color:var(--accent);background:#1C1719}
+  .band .r{flex:0 0 96px;font-weight:700;font-variant-numeric:tabular-nums;font-size:.9rem}
+  .band .s{color:var(--muted);font-size:.92rem}
+  .band.me .s{color:#D6D6D6}
+  .note{margin-top:26px;color:var(--muted);font-size:.88rem;border-top:1px solid var(--line);padding-top:16px}
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:.8rem;
+         display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+  .det{border-top:1px solid var(--line);padding:13px 0;display:grid;
+       grid-template-columns:34px 1fr;gap:12px;align-items:start}
+  .det .ix{font-size:.78rem;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;padding-top:2px}
+  .det .tx{min-width:0}
+  .det .tx b{display:block;font-weight:500;margin-bottom:4px}
+  .det .tx span{color:var(--muted);font-size:.88rem}
+  .det.ko .ix{color:var(--accent)}
+  .tag{display:inline-block;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+       padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin-right:6px}
+  .tag.a{border-color:var(--accent);color:var(--accent)}
+  .tag.o{border-color:var(--ok);color:var(--ok)}
+</style>
+<style>
+/* 23ms-theme */
+:root{
+    --on-accent:#0C0C0C; --accent:#E25667;
+    --soft:#1B1718; --soft:color-mix(in srgb, #E25667 12%, #191919);
+}
+:root[data-theme="light"]{
+    --bg:#FAFAF7; --surface:#FFFFFF; --surface2:#F2F2ED; --line:#DFDFD8;
+    --ink:#16161A; --muted:#5F5F5A; --ok:#2F8F62; --on-accent:#FFFFFF;
+    --accent:#C8384B; --accent-dim:#F7ECEE;
+    --soft:#F4F1EE; --soft:color-mix(in srgb, #C8384B 10%, #FFFFFF);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#FAFAF7; --surface:#FFFFFF; --surface2:#F2F2ED; --line:#DFDFD8;
+    --ink:#16161A; --muted:#5F5F5A; --ok:#2F8F62; --on-accent:#FFFFFF;
+    --accent:#C8384B; --accent-dim:#F7ECEE;
+    --soft:#F4F1EE; --soft:color-mix(in srgb, #C8384B 10%, #FFFFFF);
+}
+}
+.btn{color:var(--on-accent)}
+.opt:hover{border-color:var(--muted)}
+.opt[aria-pressed="true"]{background:var(--soft)}
+.opt[aria-pressed="true"] .k{color:var(--on-accent)}
+.brow.hot{background:var(--soft)}
+.brow .g i{background:var(--muted)}
+.vf button[aria-pressed="true"]{color:var(--on-accent)}
+.pil[aria-pressed="true"]{color:var(--on-accent)}
+ol.list li.done{background:var(--soft)}
+.band.me{background:var(--soft)}
+.sheet{background:#FFFFFF;border:1px solid var(--line)}
+.top,.bar{background:var(--bg)}
+.theme{position:fixed;right:14px;bottom:14px;z-index:60;appearance:none;cursor:pointer;
+  font-family:inherit;font-size:.78rem;font-weight:700;padding:9px 15px;border-radius:999px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  box-shadow:0 4px 16px rgba(0,0,0,.22)}
+.theme:hover{border-color:var(--accent);color:var(--accent)}
+@media print{
+  :root{ --bg:#FFFFFF; --surface:#FFFFFF; --surface2:#F4F4F0; --line:#CCCCC6;
+         --ink:#000000; --muted:#434341; --ok:#2F8F62; --on-accent:#FFFFFF;
+         --accent:#C8384B; --soft:#F3F3EF; }
+  html,body{background:#FFFFFF;color:#000000}
+  .theme,.nav,.top,.bar{display:none}
+  .card,.brow,.grp,.det,.ex{break-inside:avoid}
+}
+</style>
+<script>(function(){try{var t=localStorage.getItem("23ms-theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();</script>
+</head>
+<body>
+<button class="theme" id="theme" type="button" aria-label="Changer l'affichage">Clair</button>
+
+<div class="wrap">
+
+  <section id="s-intro" class="screen on">
+    <span class="brand">23 MindSet</span>
+    <h1>Mon organisation au quotidien</h1>
+    <p class="lede">Vingt-cinq situations concrètes dans lesquelles il peut vous arriver de vous retrouver.</p>
+    <div class="card" style="margin-top:26px">
+      <p style="margin-bottom:12px">Pour chaque situation, choisissez la réponse qui se rapproche le plus de votre profil personnel, ou qui s'en éloigne le moins.</p>
+      <p style="margin-bottom:12px"><b>Répondez vite, spontanément.</b> Le premier réflexe est le bon.</p>
+      <p style="color:var(--muted);margin-bottom:22px">Comptez huit à dix minutes. Votre score reste sur votre appareil, rien n'est envoyé nulle part.</p>
+      <button class="btn" id="go">Commencer</button>
+    </div>
+    <footer><span>D'après le livret d'exercices Excellens Formation - mise en forme numérique 23 MindSet - Fares ATBA</span><span>Version numérique du livret</span></footer>
+  </section>
+
+  <section id="s-q" class="screen">
+    <div class="top">
+      <div class="meta"><span id="pos"></span><span id="pct"></span></div>
+      <div class="track"><div class="fill" id="fill"></div></div>
+    </div>
+    <span class="qnum" id="qnum"></span>
+    <p class="q" id="qtxt"></p>
+    <div class="opts" id="opts"></div>
+    <div class="nav">
+      <button class="btn ghost" id="prev">Précédent</button>
+      <button class="btn" id="next">Suivant</button>
+    </div>
+  </section>
+
+  <section id="s-res" class="screen">
+    <span class="brand">Votre résultat</span>
+    <div class="score"><span class="n" id="n"></span><span class="d">points sur 75</span></div>
+    <div class="verdict"><h2 id="bt"></h2><p id="bp"></p></div>
+    <h3>Les cinq profils</h3>
+    <div id="bands"></div>
+    <h2>Le détail de vos réponses</h2>
+    <p class="lede" style="margin-bottom:10px">Chaque situation vaut de 0 à 3 points. Les situations où vous avez obtenu le moins de points apparaissent en premier : c'est là que se trouve votre marge de progrès.</p>
+    <div id="detail"></div>
+    <p class="note">Aucun score n'est bon ou mauvais. Chacun décrit un fonctionnement et son point de vigilance. Un score bas n'empêche pas d'être excellent dans son métier, il indique seulement où se trouve la marge de progrès.</p>
+    <p style="margin-top:26px;display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn ghost" id="again">Recommencer</button>
+      <button class="btn ghost" id="print">Imprimer ou enregistrer en PDF</button>
+    </p>
+    <footer><span>D'après le livret d'exercices Excellens Formation - mise en forme numérique 23 MindSet - Fares ATBA</span><span>Vos réponses restent sur votre appareil.</span></footer>
+  </section>
+
+</div>
+<script>
+(function(){
+  "use strict";
+
+  var Q = [
+    ["Pouvez-vous expliquer avec précision à un collègue les différentes tâches que vous attendez de lui ?",
+     ["Oui","Plus ou moins précisément","Je le fais au prix d'un gros effort mental","Je préfère le faire moi-même, ça va plus vite"],[3,2,1,3]],
+    ["Vous n'avez pas fini un travail en temps et en heure. Comment réagissez-vous ?",
+     ["Cela vous affecte et vous vous inquiétez","Vous trouvez une solution de rechange","Vous cravachez pour finir coûte que coûte","Ce n'est pas de votre faute, tant pis"],[1,3,2,0]],
+    ["Êtes-vous de ceux qui…",
+     ["Font leur courrier au fur et à mesure sans problème","Font attendre leur courrier puis s'en débarrassent d'un seul coup","Ont besoin de beaucoup de temps pour mettre à jour leur courrier","N'aiment pas écrire"],[3,2,1,0]],
+    ["Vous êtes plongé dans un dossier quand le téléphone sonne et qu'un collègue arrive au même moment pour une chose urgente. Comment faites-vous face ?",
+     ["Vous triez les urgences et vous y faites face dans l'ordre d'importance","Vous essayez de tout faire à la fois, avec plus ou moins d'efficacité","Vous vous sentez mal à l'aise et débordé","Vous aviez pris soin de basculer le téléphone"],[2,1,0,3]],
+    ["Vous avez donné un ordre qui n'a pas été suivi.",
+     ["Vous en tirez les enseignements et vous intervenez auprès des responsables pour que ça ne se reproduise plus","Vous vous emportez et la discussion dégénère","À chaque fois vous rattrapez vous-même les dégâts afin que le travail n'en pâtisse pas","Vous vérifiez les raisons, vous évaluez la gravité des conséquences, puis vous décidez de l'action corrective"],[2,0,1,3]],
+    ["Vous devez retrouver une agrafeuse, ou tout autre petit objet, dans vos tiroirs.",
+     ["Vous la rangez toujours au même endroit","Vous finissez par la retrouver après mûre réflexion","Vous fouillez désespérément partout","Vous empruntez celle du collègue"],[3,2,1,0]],
+    ["Vous venez d'avoir une journée de travail très active. Essayez d'en faire mentalement le résumé en moins d'une minute. Que se passe-t-il ?",
+     ["Vous n'avez pas de difficulté","C'est assez difficile mais réalisable","Vous préférez renoncer","Il vous suffit de regarder votre plan de journée où tout est inscrit dans le détail"],[2,1,0,3]],
+    ["Vous devez écrire un rapport. Comment procédez-vous ?",
+     ["Vous improvisez au fur et à mesure","Vous avez le plan en tête avant de commencer","Vous élaborez en l'écrivant","Vous rassemblez les éléments, vous arrêtez le plan, vous faites un premier jet et vous le reprenez le lendemain"],[0,1,2,3]],
+    ["Êtes-vous de ceux qui repèrent tout de suite le détail qui ne va pas ?",
+     ["Non","Oui","Parfois","Seulement s'il présente une importance"],[0,1,2,3]],
+    ["Avant de partir en vacances, vous devez déléguer une partie de vos dossiers à un collègue.",
+     ["Tout est organisé, vous lui expliquez brièvement","Vous récapitulez l'ensemble avec un minimum d'effort","Vous avez du mal à faire la synthèse de toutes les activités","Vous hésitez sur les priorités à déléguer"],[3,2,1,0]],
+    ["Votre bureau est plutôt…",
+     ["Bien rangé","Rangé selon un ordre bien à vous","Encombré de piles en attente","Envahi par les messages et les notes de votre entourage"],[3,2,1,0]],
+    ["Vous avez tendance…",
+     ["À accorder la même importance à tous les détails","À tenir compte des détails de temps en temps","À considérer les détails comme secondaires","À vérifier quels sont les détails utiles à prendre en compte"],[0,2,1,3]],
+    ["Vous avez une tâche à accomplir qui nécessite un certain nombre d'outils.",
+     ["Vous rassemblez dès le début tous les outils dont vous aurez besoin","Vous vous apercevez souvent en cours de travail que vous avez oublié différentes choses","Vous préférez sortir vos outils au fur et à mesure de vos besoins","Vous demandez à un collègue de vous les apporter"],[3,1,2,0]],
+    ["Chaque matin…",
+     ["Vous êtes à l'heure au bureau sans problème","Vous faites une véritable course contre la montre","Vous êtes à peu près dans les temps","Vous arrivez un peu avant pour plus de confort"],[2,0,1,3]],
+    ["Vous auriez plutôt comme principe…",
+     ["D'organiser soigneusement avant, d'agir après en respectant votre plan au mieux","D'organiser avant et d'agir différemment","D'organiser pendant, comme vous le sentez, selon l'inspiration du moment","De vous organiser avant au minimum, juste le strict nécessaire"],[3,1,2,0]],
+    ["Si vous devez travailler en collaboration avec quelqu'un…",
+     ["Vous le faites au prix d'un effort","Vous aimez bien","Cela ne vous pose aucun problème","Cela dépend de la personne"],[1,2,3,0]],
+    ["On discute devant vous d'un travail important à mettre en route et qui relève de vos attributions. Êtes-vous capable d'organiser mentalement les différentes étapes de l'action ?",
+     ["Oui, facilement","Plus ou moins facilement","Non, ce n'est pas évident","Vous avez toujours besoin de poser des questions complémentaires"],[3,2,0,1]],
+    ["Vous devez analyser un dossier volumineux. Comment procédez-vous ?",
+     ["Vous le divisez d'abord en plusieurs thèmes","Vous synthétisez rapidement l'ensemble des éléments","Vous résumez les parties importantes et vous laissez de côté les aspects secondaires","Les dossiers volumineux ne sont pas ceux que vous préférez"],[2,3,1,0]],
+    ["Que pensez-vous de la solution « agenda » ?",
+     ["C'est indispensable pour une bonne organisation, vous en avez un en permanence sur vous","Vous vous en sortez très bien sans","Vous en avez un mais vous n'en êtes pas satisfait","Vous en avez un mais vous l'utilisez mal"],[3,0,2,1]],
+    ["Vous avez pris rendez-vous avec un interlocuteur extérieur.",
+     ["Vous arrivez à l'heure, entretien préparé, muni des documents nécessaires","Vous êtes à l'heure mais vous n'avez pas préparé l'entretien","Vous êtes à l'heure mais vous avez oublié la documentation","Vous êtes en retard et vous commencez l'entretien énervé"],[3,1,2,0]],
+    ["Vous avez pris rendez-vous avec un collègue et une urgence se présente.",
+     ["Vous le décommandez au dernier moment en lui expliquant clairement la situation","Vous maintenez le rendez-vous : un rendez-vous pris est un rendez-vous respecté","Vous négociez l'urgence et vous arrivez à en reporter le traitement","Vous traitez l'urgence en ayant le sentiment de vous être fait voler votre temps"],[3,1,2,0]],
+    ["Vous avez soudain un peu de temps libre devant vous.",
+     ["Vous êtes perturbé et vous ne savez pas quoi faire exactement","Dans ces cas-là, vous rattrapez votre retard de classement","Vous avez une liste de choses secondaires sous le coude : vous la consultez et vous en faites une qui tiendra dans le temps","Vous en profitez pour décompresser car c'est exceptionnel"],[0,2,3,1]],
+    ["Quelle est pour vous la définition de l'urgence ?",
+     ["Un problème grave à traiter séance tenante","Une échéance très rapprochée, à préciser et à clarifier","Un imprévu","Un embêtement en provenance des autres"],[2,3,1,0]],
+    ["Quel est votre sentiment sur les imprévus du quotidien ?",
+     ["Ils vous empêchent de faire ce que vous aviez prévu et vous obligent à des reports répétitifs","Ils sont dus à ceux qui sont mal organisés et en retard dans leur travail","Ils font partie de l'activité normale et sont à traiter comme le reste","Ils sont source d'interruptions et cassent le rythme efficace de votre travail"],[1,0,3,2]],
+    ["Pouvez-vous décrire exactement, en moins de deux minutes, toutes les tâches que vous devez accomplir dès demain ?",
+     ["Oui, c'est facile","C'est réalisable avec un peu d'effort","C'est très difficile","Je ne sais pas encore de quoi sera faite cette journée"],[3,2,1,0]]
+  ];
+
+  var BANDS = [
+    {min:69, max:999, r:"Plus de 68", t:"L'organisation ne vous pose pas de problème",
+     p:"Vous savez ordonner les choses et vous faites avancer votre travail en souplesse et efficacement. Bon organisateur, vous savez opérer stratégiquement en ménageant les susceptibilités de votre entourage, tout en restant maître de vos priorités."},
+    {min:55, max:68, r:"De 55 à 68", t:"Rigueur et précision",
+     p:"Vous pouvez passer beaucoup de temps et dépenser beaucoup d'énergie à organiser un planning parfait avant de le réaliser. Et quand vient le temps de la réalisation, vous n'omettez aucun détail. Vous voulez que ça roule, mais parfois les autres ont du mal à vous suivre : vous agissez beaucoup et vous expliquez peu. Donnez plus de directives, expliquez votre méthode et vos buts."},
+    {min:40, max:54, r:"De 40 à 54", t:"Méthodique, parfois trop",
+     p:"Vous vous efforcez de procéder avec organisation et méthode. Vous vérifiez tous les détails et vous pouvez vous montrer très exigeant. On vous trouve parfois un peu tatillon. Cette grande précision risque de vous jouer de mauvais tours : il vous arrive de consacrer beaucoup de temps à des choses qui n'en demandent pas autant. Demandez-vous si vous n'êtes pas en train d'en faire trop."},
+    {min:28, max:39, r:"De 28 à 39", t:"Une organisation très personnelle",
+     p:"Tout va bien tant que vous pouvez agir exactement comme vous l'entendez. Mais vous travaillez trop en solitaire. Si vous devez rendre des comptes ou travailler en équipe, votre organisation en souffre. C'est probablement dû au fait que vous agissez vite, sans réfléchir à fond. Tenez davantage compte des données extérieures."},
+    {min:-1, max:27, r:"Moins de 28", t:"Vous décidez au fil des évènements",
+     p:"Ce n'est pas le sens de l'organisation qui vous caractérise. Vous agissez sous le coup de l'inspiration et, de ce fait, vous supportez très mal les contraintes. Cela peut vous jouer des tours, surtout en équipe ou sous les ordres de quelqu'un. Adaptez-vous mieux aux situations, tenez plus compte des règles établies et perfectionnez vos méthodes de travail : outils, techniques, réflexes pratiques."}
+  ];
+
+  var LET = ["a","b","c","d"];
+  var rep = new Array(Q.length).fill(null);
+  var i = 0;
+  var $ = function(id){ return document.getElementById(id); };
+
+  function show(id){
+    ["s-intro","s-q","s-res"].forEach(function(s){ $(s).classList.toggle("on", s === id); });
+    window.scrollTo(0,0);
+  }
+
+  function render(){
+    var q = Q[i];
+    $("pos").textContent = "Question " + (i+1) + " sur " + Q.length;
+    var done = rep.filter(function(r){ return r !== null; }).length;
+    $("pct").textContent = done + " répondue" + (done>1?"s":"");
+    $("fill").style.width = Math.round((i / Q.length) * 100) + "%";
+    $("qnum").textContent = "Situation " + (i+1);
+    $("qtxt").textContent = q[0];
+
+    var box = $("opts"); box.innerHTML = "";
+    q[1].forEach(function(txt, k){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "opt";
+      b.setAttribute("aria-pressed", rep[i] === k ? "true" : "false");
+      var kk = document.createElement("span"); kk.className = "k"; kk.textContent = LET[k];
+      var tt = document.createElement("span"); tt.textContent = txt;
+      b.appendChild(kk); b.appendChild(tt);
+      b.addEventListener("click", function(){
+        rep[i] = k;
+        if (i < Q.length - 1) { i++; render(); }
+        else { render(); }
+      });
+      box.appendChild(b);
+    });
+
+    $("prev").disabled = (i === 0);
+    $("next").textContent = (i === Q.length - 1) ? "Voir mon résultat" : "Suivant";
+    $("next").disabled = (i === Q.length - 1) && rep.indexOf(null) !== -1;
+  }
+
+  function total(){
+    return rep.reduce(function(s, r, k){ return s + (r === null ? 0 : Q[k][2][r]); }, 0);
+  }
+
+  function resultat(){
+    var sc = total();
+    $("n").textContent = sc;
+    var me = BANDS.filter(function(b){ return sc >= b.min && sc <= b.max; })[0];
+    $("bt").textContent = me.t;
+    $("bp").textContent = me.p;
+    var box = $("bands"); box.innerHTML = "";
+    BANDS.forEach(function(b){
+      var d = document.createElement("div");
+      d.className = "band" + (b === me ? " me" : "");
+      var r = document.createElement("span"); r.className = "r"; r.textContent = b.r;
+      var s = document.createElement("span"); s.className = "s"; s.textContent = b.t;
+      d.appendChild(r); d.appendChild(s); box.appendChild(d);
+    });
+
+    var det = document.getElementById("detail");
+    det.innerHTML = "";
+    var idx = Q.map(function(_,k){ return k; });
+    idx.sort(function(a,b){ return Q[a][2][rep[a]] - Q[b][2][rep[b]] || a - b; });
+    idx.forEach(function(k){
+      var pts = Q[k][2][rep[k]];
+      var d = document.createElement("div"); d.className = "det" + (pts <= 1 ? " ko" : "");
+      var ix = document.createElement("span"); ix.className = "ix"; ix.textContent = (k+1);
+      var tx = document.createElement("span"); tx.className = "tx";
+      var b = document.createElement("b"); b.textContent = Q[k][0];
+      var sp = document.createElement("span");
+      var t = document.createElement("span");
+      t.className = "tag" + (pts >= 3 ? " o" : (pts <= 1 ? " a" : ""));
+      t.textContent = pts + " point" + (pts > 1 ? "s" : "");
+      sp.appendChild(t);
+      var mx = Math.max.apply(null, Q[k][2]);
+      var best = Q[k][1][Q[k][2].indexOf(mx)];
+      sp.appendChild(document.createTextNode(
+        "Votre r\u00e9ponse : " + Q[k][1][rep[k]]
+        + (pts === mx ? " \u00b7 c'est la r\u00e9ponse la mieux cot\u00e9e."
+                      : " \u00b7 la mieux cot\u00e9e : " + best + ".")));
+      tx.appendChild(b); tx.appendChild(sp);
+      d.appendChild(ix); d.appendChild(tx); det.appendChild(d);
+    });
+    show("s-res");
+  }
+
+  $("go").addEventListener("click", function(){ i = 0; rep.fill(null); render(); show("s-q"); });
+  $("prev").addEventListener("click", function(){ if (i > 0) { i--; render(); } });
+  $("next").addEventListener("click", function(){
+    if (i < Q.length - 1) { i++; render(); }
+    else if (rep.indexOf(null) === -1) { resultat(); }
+    else {
+      var miss = rep.indexOf(null);
+      i = miss; render();
+    }
+  });
+  $("again").addEventListener("click", function(){ i = 0; rep.fill(null); render(); show("s-q"); });
+  $("print").addEventListener("click", function(){ window.print(); });
+})();
+</script>
+<script>
+(function(){
+  "use strict";
+  var r = document.documentElement, b = document.getElementById("theme");
+  if(!b) return;
+  function cur(){
+    var a = r.getAttribute("data-theme");
+    if(a === "light" || a === "dark") return a;
+    return (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches)
+      ? "light" : "dark";
+  }
+  function peindre(){
+    var c = cur();
+    b.textContent = (c === "dark") ? "\u2600 Clair" : "\u263E Sombre";
+    b.setAttribute("aria-label", (c === "dark")
+      ? "Passer \u00e0 l'affichage clair" : "Passer \u00e0 l'affichage sombre");
+  }
+  b.addEventListener("click", function(){
+    var n = (cur() === "dark") ? "light" : "dark";
+    r.setAttribute("data-theme", n);
+    try { localStorage.setItem("23ms-theme", n); } catch(e){}
+    peindre();
+  });
+  if(window.matchMedia){
+    try {
+      window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function(){
+        if(!r.getAttribute("data-theme")) peindre();
+      });
+    } catch(e){}
+  }
+  peindre();
+})();
+</script>
+</body>
+</html>
